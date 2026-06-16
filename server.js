@@ -27,6 +27,16 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+// Verify connection configuration
+transporter.verify((error, success) => {
+    if (error) {
+        console.error('SMTP Connection Error: Invalid login credentials or configuration.');
+        console.error(error.message);
+    } else {
+        console.log('SMTP Server is ready to take our messages');
+    }
+});
+
 // POST Route to handle form submission
 app.post('/send-email', (req, res) => {
     const { name, email, message } = req.body;
@@ -69,8 +79,12 @@ app.post('/send-email', (req, res) => {
 
     transporter.sendMail(mailOptions, (error, info) => {
         if (error) {
-            console.log(error);
-            return res.status(500).json({ success: false, error: error.message });
+            console.error('Email send error:', error);
+            let errorMessage = error.message || 'Failed to send email. Please try again later.';
+            if (error.code === 'EAUTH') {
+                errorMessage = 'Server configuration error: Invalid email login credentials.';
+            }
+            return res.status(500).json({ success: false, error: errorMessage });
         } else {
             console.log('Email sent: ' + info.response);
             return res.status(200).json({ success: true, message: 'Email sent successfully!' });
